@@ -144,6 +144,10 @@ public final class GestorDespachos {
         return colaDespacho.size();
     }
 
+    public boolean estaEnCola(String codigo) {
+        return buscar(codigo).map(colaDespacho::contains).orElse(false);
+    }
+
     public int cantidadPorEstado(EstadoSolicitud estado) {
         int total = 0;
         for (SolicitudDespacho solicitud : solicitudes) {
