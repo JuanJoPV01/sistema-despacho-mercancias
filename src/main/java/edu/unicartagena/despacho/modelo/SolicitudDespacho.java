@@ -20,7 +20,7 @@ public final class SolicitudDespacho {
 
     public SolicitudDespacho(String codigo, Destino destino, Producto producto, int cantidad, Prioridad prioridad,
             long secuencia, LocalDateTime fechaRegistro) throws ValidacionException {
-        this.codigo = Validador.codigo(codigo, "código de la solicitud", PATRON_CODIGO, FORMATO_CODIGO);
+        this.codigo = validarCodigo(codigo);
         this.destino = Validador.requerido(destino, "destino de la solicitud");
         this.producto = Validador.requerido(producto, "producto de la solicitud");
         this.cantidad = Validador.enteroEnRango(cantidad, 1, 50000, "cantidad");
@@ -38,7 +38,11 @@ public final class SolicitudDespacho {
     }
 
     public void setCodigo(String codigo) throws ValidacionException {
-        this.codigo = Validador.codigo(codigo, "código de la solicitud", PATRON_CODIGO, FORMATO_CODIGO);
+        this.codigo = validarCodigo(codigo);
+    }
+
+    public static String validarCodigo(String codigo) throws ValidacionException {
+        return Validador.codigo(codigo, "código de la solicitud", PATRON_CODIGO, FORMATO_CODIGO);
     }
 
     public Destino getDestino() {

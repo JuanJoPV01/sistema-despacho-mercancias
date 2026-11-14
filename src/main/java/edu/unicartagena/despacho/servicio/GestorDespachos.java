@@ -144,6 +144,89 @@ public final class GestorDespachos {
         return colaDespacho.size();
     }
 
+    public int cantidadPorEstado(EstadoSolicitud estado) {
+        int total = 0;
+        for (SolicitudDespacho solicitud : solicitudes) {
+            if (solicitud.getEstado() == estado) {
+                total++;
+            }
+        }
+        return total;
+    }
+
+    public SolicitudDespacho modificarCodigo(String codigoActual, String nuevoCodigo) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigoActual);
+        String normalizado = SolicitudDespacho.validarCodigo(nuevoCodigo);
+        String anterior = solicitud.getCodigo();
+        if (normalizado.equals(anterior)) {
+            return solicitud;
+        }
+        if (solicitudesPorCodigo.containsKey(normalizado)) {
+            throw new ValidacionException("Ya existe una solicitud con el código " + normalizado + ".");
+        }
+        solicitudesPorCodigo.remove(anterior);
+        solicitud.setCodigo(normalizado);
+        solicitudesPorCodigo.put(normalizado, solicitud);
+        return solicitud;
+    }
+
+    public SolicitudDespacho modificarDestino(String codigo, String nombreDestino) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        String buscado = Validador.textoObligatorio(nombreDestino, "nombre del destino");
+        Destino nuevoDestino = registroDestinos.buscar(buscado)
+                .orElseThrow(() -> new ValidacionException(
+                        "No existe un destino registrado con el nombre " + buscado + "."));
+        if (nuevoDestino.equals(solicitud.getDestino())) {
+            return solicitud;
+        }
+        quitarDelArbol(solicitud);
+        solicitud.setDestino(nuevoDestino);
+        agregarAlArbol(solicitud);
+        return solicitud;
+    }
+
+    public SolicitudDespacho modificarProducto(String codigo, String codigoProducto) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        String buscado = Validador.textoObligatorio(codigoProducto, "código del producto");
+        Producto nuevoProducto = catalogo.buscar(buscado)
+                .orElseThrow(() -> new ValidacionException(
+                        "No existe un producto registrado con el código " + buscado.toUpperCase(Locale.ROOT) + "."));
+        solicitud.setProducto(nuevoProducto);
+        return solicitud;
+    }
+
+    public SolicitudDespacho modificarCantidad(String codigo, int cantidad) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        solicitud.setCantidad(cantidad);
+        return solicitud;
+    }
+
+    public SolicitudDespacho modificarPrioridad(String codigo, Prioridad prioridad) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        solicitud.setPrioridad(prioridad);
+        boolean estabaEnCola = colaDespacho.remove(solicitud);
+        if (estabaEnCola) {
+            colaDespacho.add(solicitud);
+        }
+        return solicitud;
+    }
+
+    public SolicitudDespacho modificarEstado(String codigo, EstadoSolicitud estado) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        solicitud.setEstado(estado);
+        colaDespacho.remove(solicitud);
+        return solicitud;
+    }
+
+    public SolicitudDespacho eliminar(String codigo) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        solicitudes.remove(solicitud);
+        solicitudesPorCodigo.remove(solicitud.getCodigo());
+        quitarDelArbol(solicitud);
+        colaDespacho.remove(solicitud);
+        return solicitud;
+    }
+
     public void limpiar() {
         solicitudes.clear();
         solicitudesPorCodigo.clear();
@@ -160,5 +243,15 @@ public final class GestorDespachos {
     private void agregarAlArbol(SolicitudDespacho solicitud) {
         despachosPorDestino.computeIfAbsent(solicitud.getDestino(), destino -> new ArrayList<>())
                 .add(solicitud);
+    }
+
+    private void quitarDelArbol(SolicitudDespacho solicitud) {
+        List<SolicitudDespacho> grupo = despachosPorDestino.get(solicitud.getDestino());
+        if (grupo != null) {
+            grupo.remove(solicitud);
+            if (grupo.isEmpty()) {
+                despachosPorDestino.remove(solicitud.getDestino());
+            }
+        }
     }
 }
