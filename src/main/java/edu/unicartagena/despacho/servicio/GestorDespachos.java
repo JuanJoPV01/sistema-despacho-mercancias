@@ -209,7 +209,7 @@ public final class GestorDespachos {
         SolicitudDespacho solicitud = buscarObligatoria(codigo);
         solicitud.setPrioridad(prioridad);
         boolean estabaEnCola = colaDespacho.remove(solicitud);
-        if (estabaEnCola) {
+        if (estabaEnCola && solicitud.getEstado() == EstadoSolicitud.PENDIENTE) {
             colaDespacho.add(solicitud);
         }
         return solicitud;
@@ -218,7 +218,9 @@ public final class GestorDespachos {
     public SolicitudDespacho modificarEstado(String codigo, EstadoSolicitud estado) throws ValidacionException {
         SolicitudDespacho solicitud = buscarObligatoria(codigo);
         solicitud.setEstado(estado);
-        colaDespacho.remove(solicitud);
+        if (estado != EstadoSolicitud.PENDIENTE) {
+            colaDespacho.remove(solicitud);
+        }
         return solicitud;
     }
 

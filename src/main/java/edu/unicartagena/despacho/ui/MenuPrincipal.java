@@ -72,6 +72,7 @@ public final class MenuPrincipal {
                 13. Eliminar solicitud
                 14. Mostrar estado de las colecciones
                 15. Cargar datos de demostración
+                16. Consultar solicitudes por estado
                  0. Salir
                 ==========================================""");
     }
@@ -93,11 +94,12 @@ public final class MenuPrincipal {
             case 13 -> eliminarSolicitud();
             case 14 -> mostrarResumen();
             case 15 -> cargarDatosDemostracion();
+            case 16 -> consultarPorEstado();
             case 0 -> {
                 consola.info("Sesión finalizada.");
                 ejecutando = false;
             }
-            default -> consola.error("Opción inválida. Seleccione un número entre 0 y 15.");
+            default -> consola.error("Opción inválida. Seleccione un número entre 0 y 16.");
         }
     }
 
@@ -369,6 +371,26 @@ public final class MenuPrincipal {
                 + " | Productos: " + resumen.productos()
                 + " | Destinos: " + resumen.destinos()
                 + " | En cola: " + resumen.enCola());
+    }
+
+    private void consultarPorEstado() throws ValidacionException {
+        consola.titulo("CONSULTAR SOLICITUDES POR ESTADO");
+        EstadoSolicitud estado = pedirEstado();
+        List<SolicitudDespacho> solicitudes = sistema.despachos().listarPorEstado(estado);
+        if (solicitudes.isEmpty()) {
+            consola.info("No hay solicitudes en estado " + estado.getEtiqueta().toLowerCase(Locale.ROOT) + ".");
+            return;
+        }
+        imprimirEncabezadoSolicitudes();
+        for (SolicitudDespacho solicitud : solicitudes) {
+            imprimirFilaSolicitud(solicitud);
+        }
+        consola.imprimir("Total en estado " + estado.getEtiqueta().toLowerCase(Locale.ROOT)
+                + ": " + solicitudes.size());
+        if (estado == EstadoSolicitud.PENDIENTE) {
+            consola.imprimir("De ellas, " + sistema.despachos().cantidadEnCola()
+                    + " están programadas en la cola de despacho.");
+        }
     }
 
     private void mostrarDestinosDisponibles() {

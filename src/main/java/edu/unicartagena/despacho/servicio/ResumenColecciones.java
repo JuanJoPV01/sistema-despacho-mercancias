@@ -1,7 +1,5 @@
 package edu.unicartagena.despacho.servicio;
 
-import edu.unicartagena.despacho.modelo.EstadoSolicitud;
-
 public record ResumenColecciones(
         int solicitudes,
         int indiceCodigos,
@@ -19,13 +17,8 @@ public record ResumenColecciones(
                 || despachadas < 0 || canceladas < 0) {
             throw new IllegalArgumentException("Los contadores no pueden ser negativos.");
         }
-    }
-
-    public int totalPorEstado(EstadoSolicitud estado) {
-        return switch (estado) {
-            case PENDIENTE -> pendientes;
-            case DESPACHADA -> despachadas;
-            case CANCELADA -> canceladas;
-        };
+        if (pendientes + despachadas + canceladas != solicitudes) {
+            throw new IllegalArgumentException("Los estados no coinciden con el total de solicitudes.");
+        }
     }
 }
