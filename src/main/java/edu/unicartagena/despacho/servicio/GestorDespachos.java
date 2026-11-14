@@ -16,6 +16,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.TreeMap;
 
 public final class GestorDespachos {
@@ -25,6 +27,7 @@ public final class GestorDespachos {
     private final List<SolicitudDespacho> solicitudes = new ArrayList<>();
     private final Map<String, SolicitudDespacho> solicitudesPorCodigo = new HashMap<>();
     private final NavigableMap<Destino, List<SolicitudDespacho>> despachosPorDestino = new TreeMap<>();
+    private final Queue<SolicitudDespacho> colaDespacho = new PriorityQueue<>(Comparadores.PRIORIDAD_DESPACHO);
     private long secuencia;
 
     public GestorDespachos(CatalogoProductos catalogo, RegistroDestinos registroDestinos) {
@@ -100,11 +103,58 @@ public final class GestorDespachos {
         return despachosPorDestino.size();
     }
 
+    public SolicitudDespacho encolar(String codigo) throws ValidacionException {
+        SolicitudDespacho solicitud = buscarObligatoria(codigo);
+        if (solicitud.getEstado() != EstadoSolicitud.PENDIENTE) {
+            throw new ValidacionException("La solicitud " + solicitud.getCodigo()
+                    + " no está pendiente y no puede agregarse a la cola de despacho.");
+        }
+        if (colaDespacho.contains(solicitud)) {
+            throw new ValidacionException("La solicitud " + solicitud.getCodigo()
+                    + " ya está en la cola de despacho.");
+        }
+        colaDespacho.add(solicitud);
+        return solicitud;
+    }
+
+    public Optional<SolicitudDespacho> proximoDespacho() {
+        return Optional.ofNullable(colaDespacho.peek());
+    }
+
+    public Optional<SolicitudDespacho> procesarSiguiente() throws ValidacionException {
+        SolicitudDespacho solicitud = colaDespacho.poll();
+        if (solicitud == null) {
+            return Optional.empty();
+        }
+        solicitud.setEstado(EstadoSolicitud.DESPACHADA);
+        return Optional.of(solicitud);
+    }
+
+    public List<SolicitudDespacho> colaEnOrdenDeAtencion() {
+        Queue<SolicitudDespacho> copia = new PriorityQueue<>(Comparadores.PRIORIDAD_DESPACHO);
+        copia.addAll(colaDespacho);
+        List<SolicitudDespacho> orden = new ArrayList<>();
+        while (!copia.isEmpty()) {
+            orden.add(copia.poll());
+        }
+        return List.copyOf(orden);
+    }
+
+    public int cantidadEnCola() {
+        return colaDespacho.size();
+    }
+
     public void limpiar() {
         solicitudes.clear();
         solicitudesPorCodigo.clear();
         despachosPorDestino.clear();
+        colaDespacho.clear();
         secuencia = 0;
+    }
+
+    private SolicitudDespacho buscarObligatoria(String codigo) throws ValidacionException {
+        return buscar(codigo).orElseThrow(() -> new ValidacionException("No existe una solicitud con el código "
+                + (codigo == null ? "" : codigo.trim().toUpperCase(Locale.ROOT)) + "."));
     }
 
     private void agregarAlArbol(SolicitudDespacho solicitud) {
