@@ -9,11 +9,14 @@ import edu.unicartagena.despacho.modelo.Producto;
 import edu.unicartagena.despacho.modelo.SolicitudDespacho;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.TreeMap;
 
 public final class GestorDespachos {
 
@@ -21,6 +24,7 @@ public final class GestorDespachos {
     private final RegistroDestinos registroDestinos;
     private final List<SolicitudDespacho> solicitudes = new ArrayList<>();
     private final Map<String, SolicitudDespacho> solicitudesPorCodigo = new HashMap<>();
+    private final NavigableMap<Destino, List<SolicitudDespacho>> despachosPorDestino = new TreeMap<>();
     private long secuencia;
 
     public GestorDespachos(CatalogoProductos catalogo, RegistroDestinos registroDestinos) {
@@ -49,6 +53,7 @@ public final class GestorDespachos {
         secuencia++;
         solicitudes.add(solicitud);
         solicitudesPorCodigo.put(solicitud.getCodigo(), solicitud);
+        agregarAlArbol(solicitud);
         return solicitud;
     }
 
@@ -77,6 +82,12 @@ public final class GestorDespachos {
         return buscar(codigo).isPresent();
     }
 
+    public NavigableMap<Destino, List<SolicitudDespacho>> despachosPorDestino() {
+        NavigableMap<Destino, List<SolicitudDespacho>> copia = new TreeMap<>(despachosPorDestino);
+        copia.replaceAll((destino, grupo) -> List.copyOf(grupo));
+        return Collections.unmodifiableNavigableMap(copia);
+    }
+
     public int cantidad() {
         return solicitudes.size();
     }
@@ -85,9 +96,19 @@ public final class GestorDespachos {
         return solicitudesPorCodigo.size();
     }
 
+    public int cantidadDestinosConDespachos() {
+        return despachosPorDestino.size();
+    }
+
     public void limpiar() {
         solicitudes.clear();
         solicitudesPorCodigo.clear();
+        despachosPorDestino.clear();
         secuencia = 0;
+    }
+
+    private void agregarAlArbol(SolicitudDespacho solicitud) {
+        despachosPorDestino.computeIfAbsent(solicitud.getDestino(), destino -> new ArrayList<>())
+                .add(solicitud);
     }
 }
